@@ -57,14 +57,12 @@ const CONFIG = {
 
     music: {
         enabled: true,
-        autoplay: false, // Changed to false - user will click to play (browsers block autoplay)
-        // YouTube video ID (extract from URL: https://www.youtube.com/watch?v=VIDEO_ID)
-        youtubeVideoId: "8SYPKQMW_2Q", // Your video ID
-        // Fallback direct audio URL (optional - use if YouTube doesn't work)
-        fallbackAudioUrl: "", // You can add an mp3 URL here as backup
+        autoplay: true,
+        youtubeVideoId: "8SYPKQMW_2Q",
+        fallbackAudioUrl: "",
         startText: "🎵 Play Music",
-        stopText: "🔇 Stop Music",
-        volume: 50 // Volume level 0-100
+        stopText: "🔇 Mute Music",
+        volume: 50
     }
 };
 
