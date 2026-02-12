@@ -1,21 +1,51 @@
-// Update CSS variables from configuration
-function applyTheme() {
+// Apply theme colors from config
+window.addEventListener('DOMContentLoaded', () => {
     const config = window.VALENTINE_CONFIG;
-    const root = document.documentElement;
+    
+    if (!config || !config.colors) {
+        console.warn('No color configuration found');
+        return;
+    }
 
-    // Apply colors
-    root.style.setProperty('--background-color-1', config.colors.backgroundStart);
-    root.style.setProperty('--background-color-2', config.colors.backgroundEnd);
-    root.style.setProperty('--button-color', config.colors.buttonBackground);
-    root.style.setProperty('--button-hover', config.colors.buttonHover);
-    root.style.setProperty('--text-color', config.colors.textColor);
-
-    // Apply animation settings
-    root.style.setProperty('--float-duration', config.animations.floatDuration);
-    root.style.setProperty('--float-distance', config.animations.floatDistance);
-    root.style.setProperty('--bounce-speed', config.animations.bounceSpeed);
-    root.style.setProperty('--heart-explosion-size', config.animations.heartExplosionSize);
-}
-
-// Apply theme when the page loads
-window.addEventListener('DOMContentLoaded', applyTheme); 
+    // Apply background gradient
+    document.body.style.background = `linear-gradient(135deg, ${config.colors.backgroundStart} 0%, ${config.colors.backgroundEnd} 100%)`;
+    
+    // Create dynamic style element for button colors
+    const style = document.createElement('style');
+    style.textContent = `
+        h1, #celebrationTitle {
+            color: ${config.colors.textColor} !important;
+        }
+        
+        .cute-btn:not(.yes-btn):not(.final-yes):not(.no-btn) {
+            background: linear-gradient(135deg, ${config.colors.buttonBackground} 0%, ${config.colors.buttonHover} 100%);
+            box-shadow: 0 5px 15px ${config.colors.buttonBackground}66;
+        }
+        
+        .cute-btn:not(.yes-btn):not(.final-yes):not(.no-btn):hover {
+            box-shadow: 0 8px 25px ${config.colors.buttonBackground}99;
+        }
+        
+        .love-value-container, #extraLove {
+            color: ${config.colors.textColor};
+        }
+        
+        .slider {
+            background: linear-gradient(to right, ${config.colors.backgroundStart}, ${config.colors.buttonBackground});
+        }
+        
+        .slider::-webkit-slider-thumb {
+            background: linear-gradient(135deg, ${config.colors.buttonBackground}, ${config.colors.textColor});
+        }
+        
+        .slider::-moz-range-thumb {
+            background: linear-gradient(135deg, ${config.colors.buttonBackground}, ${config.colors.textColor});
+        }
+        
+        .lying-message {
+            background: linear-gradient(135deg, ${config.colors.buttonBackground}, ${config.colors.buttonHover});
+        }
+    `;
+    
+    document.head.appendChild(style);
+});

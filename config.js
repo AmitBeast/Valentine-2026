@@ -1,42 +1,42 @@
 const CONFIG = {
-    valentineName: "Евелин",
+    valentineName: "My Valentine",
 
-    pageTitle: "Имам един малък въпрос към теб 💫",
+    pageTitle: "I have a little question for you 💫",
 
     floatingEmojis: {
-        hearts: ['💖', '💝', '💗', '💓'],
-        bears: ['🧸']
+        hearts: ['💖', '💝', '💗', '💓', '💕', '💘'],
+        bears: ['🧸', '🐻', '🐨']
     },
 
     questions: {
         first: {
-            text: "Харесва ли ти да сме заедно така, както сме? 😊",
-            yesBtn: "Много",
-            noBtn: "Хмм 🤔",
-            secretAnswer: "И на мен ми е много хубаво с теб ❤️"
+            text: "Do you like being together with me the way we are? 😊",
+            yesBtn: "Yes, Very Much ❤️",
+            noBtn: "Not Really 🤔",
+            noResponse: "You're lying! 😏💕"
         },
         second: {
-            text: "Колко ти е приятно, когато сме заедно?",
-            startText: "Толкова 👉",
-            nextBtn: "Продължи 💕"
+            text: "How good does it feel when we're together?",
+            startText: "This much 👉",
+            nextBtn: "Continue 💕"
         },
         third: {
-            text: "Искаш ли да си ми валентинка тази година? 🌹",
-            yesBtn: "Да ❤️",
-            noBtn: "Нека си е както досега 😊"
+            text: "Will you be my Valentine this year? 🌹",
+            yesBtn: "Yes! ❤️",
+            noBtn: "Maybe Later 😊"
         }
     },
 
     loveMessages: {
-        extreme: "Ей, това вече е опасно сладко 🥰💫",
-        high: "Май си доста навътре 😌💖",
-        normal: "Това ми стига напълно 💕"
+        extreme: "Whoa, that's dangerously sweet! 🥰💫",
+        high: "Looks like you're pretty into this 😌💖",
+        normal: "That's more than enough for me 💕"
     },
 
     celebration: {
-        title: "Усмихна ме много 💝",
-        message: "Нищо не обещавам… освен хубави моменти заедно 😌",
-        emojis: "💖✨😊💝🧸"
+        title: "You made me smile so much! 💝",
+        message: "I promise nothing... except beautiful moments together 😌✨",
+        emojis: "💖✨😊💝🧸🌹"
     },
 
     colors: {
@@ -44,7 +44,8 @@ const CONFIG = {
         backgroundEnd: "#ffc3a0",
         buttonBackground: "#ff6b6b",
         buttonHover: "#ff8787",
-        textColor: "#BAB86C"
+        textColor: "#ff4757",
+        accentColor: "#BAB86C"
     },
 
     animations: {
@@ -56,11 +57,14 @@ const CONFIG = {
 
     music: {
         enabled: true,
-        autoplay: true,
-        musicUrl: "https://res.cloudinary.com/dsnias42f/video/upload/v1770207192/Wet_c7foqi.mp3",
-        startText: "🎵 Пусни музиката",
-        stopText: "🔇 Спри музиката",
-        volume: 0.5
+        autoplay: false, // Changed to false - user will click to play (browsers block autoplay)
+        // YouTube video ID (extract from URL: https://www.youtube.com/watch?v=VIDEO_ID)
+        youtubeVideoId: "8SYPKQMW_2Q", // Your video ID
+        // Fallback direct audio URL (optional - use if YouTube doesn't work)
+        fallbackAudioUrl: "", // You can add an mp3 URL here as backup
+        startText: "🎵 Play Music",
+        stopText: "🔇 Stop Music",
+        volume: 50 // Volume level 0-100
     }
 };
 

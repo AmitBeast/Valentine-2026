@@ -59,13 +59,12 @@ window.addEventListener('DOMContentLoaded', () => {
     validateConfig();
 
     // Set texts from config
-    document.getElementById('valentineTitle').textContent = `${config.valentineName}, прекрасна...`;
+    document.getElementById('valentineTitle').textContent = `${config.valentineName}, beautiful...`;
     
     // Set first question texts
     document.getElementById('question1Text').textContent = config.questions.first.text;
     document.getElementById('yesBtn1').textContent = config.questions.first.yesBtn;
     document.getElementById('noBtn1').textContent = config.questions.first.noBtn;
-    document.getElementById('secretAnswerBtn').textContent = config.questions.first.secretAnswer;
     
     // Set second question texts
     document.getElementById('question2Text').textContent = config.questions.second.text;
@@ -116,17 +115,111 @@ function setRandomPosition(element) {
 
 // Function to show next question
 function showNextQuestion(questionNumber) {
+    // Reset click count when moving to next question
+    noClickCount = 0;
+    
     document.querySelectorAll('.question-section').forEach(q => q.classList.add('hidden'));
     document.getElementById(`question${questionNumber}`).classList.remove('hidden');
+    
+    // Reset any fixed position buttons back to normal
+    document.querySelectorAll('.no-btn').forEach(btn => {
+        btn.style.position = 'relative';
+        btn.style.left = 'auto';
+        btn.style.top = 'auto';
+        btn.style.zIndex = 'auto';
+    });
 }
 
-// Function to move the "No" button when clicked
-function moveButton(button) {
-    const x = Math.random() * (window.innerWidth - button.offsetWidth);
-    const y = Math.random() * (window.innerHeight - button.offsetHeight);
+// Track click count for different messages
+let noClickCount = 0;
+
+// Function to move the "No" button and show "You're lying" message
+function handleNoClick(button) {
+    noClickCount++;
+    
+    // Get button dimensions
+    const btnWidth = button.offsetWidth;
+    const btnHeight = button.offsetHeight;
+    
+    // Calculate safe boundaries (with padding from edges)
+    const padding = 20;
+    const maxX = window.innerWidth - btnWidth - padding;
+    const maxY = window.innerHeight - btnHeight - padding;
+    
+    // Generate random position within safe bounds
+    const x = Math.max(padding, Math.random() * maxX);
+    const y = Math.max(padding, Math.random() * maxY);
+    
+    // Move the button
     button.style.position = 'fixed';
     button.style.left = x + 'px';
     button.style.top = y + 'px';
+    button.style.zIndex = '100';
+    button.style.transition = 'all 0.3s ease';
+    
+    // Show "You're lying" message
+    showLyingMessage(x, y, btnWidth, btnHeight);
+    
+    // Make the button shake
+    button.style.animation = 'shake 0.5s';
+    setTimeout(() => {
+        button.style.animation = '';
+    }, 500);
+}
+
+// Show "You're lying" message near the button
+function showLyingMessage(x, y, btnWidth, btnHeight) {
+    // Remove any existing message
+    const existingMsg = document.querySelector('.lying-message');
+    if (existingMsg) {
+        existingMsg.remove();
+    }
+    
+    // Different messages based on click count
+    let message = config.questions.first.noResponse;
+    if (noClickCount > 5) {
+        message = "Still lying? 😏💕";
+    }
+    if (noClickCount > 10) {
+        message = "Come on, I know you're lying! 😊❤️";
+    }
+    if (noClickCount > 15) {
+        message = "Just click Yes already! 😄💖";
+    }
+    
+    // Create new message
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'lying-message';
+    messageDiv.textContent = message;
+    messageDiv.style.position = 'fixed';
+    
+    // Position message above the button with safe boundaries
+    const messageWidth = 250; // approximate width
+    const messageHeight = 60; // approximate height
+    const padding = 10;
+    
+    // Try to place above button, but adjust if too close to top
+    let messageX = x + (btnWidth / 2) - (messageWidth / 2);
+    let messageY = y - messageHeight - padding;
+    
+    // Keep message within screen bounds
+    messageX = Math.max(padding, Math.min(messageX, window.innerWidth - messageWidth - padding));
+    messageY = Math.max(padding, messageY);
+    
+    // If message would be above screen, place it below button instead
+    if (messageY < padding) {
+        messageY = y + btnHeight + padding;
+    }
+    
+    messageDiv.style.left = messageX + 'px';
+    messageDiv.style.top = messageY + 'px';
+    document.body.appendChild(messageDiv);
+    
+    // Fade out and remove after 2 seconds
+    setTimeout(() => {
+        messageDiv.style.opacity = '0';
+        setTimeout(() => messageDiv.remove(), 500);
+    }, 2000);
 }
 
 // Love meter functionality
@@ -194,49 +287,222 @@ function createHeartExplosion() {
         const heart = document.createElement('div');
         const randomHeart = config.floatingEmojis.hearts[Math.floor(Math.random() * config.floatingEmojis.hearts.length)];
         heart.innerHTML = randomHeart;
-        heart.className = 'heart';
+        heart.className = 'heart explosion-heart';
         document.querySelector('.floating-elements').appendChild(heart);
-        setRandomPosition(heart);
+        
+        // Random position and animation
+        heart.style.left = '50%';
+        heart.style.top = '50%';
+        heart.style.setProperty('--random-x', (Math.random() - 0.5) * 200 + 'vw');
+        heart.style.setProperty('--random-y', (Math.random() - 0.5) * 200 + 'vh');
+        heart.style.animationDelay = Math.random() * 0.5 + 's';
     }
 }
 
-// Music Player Setup
-function setupMusicPlayer() {
-    const musicControls = document.getElementById('musicControls');
-    const musicToggle = document.getElementById('musicToggle');
-    const bgMusic = document.getElementById('bgMusic');
-    const musicSource = document.getElementById('musicSource');
+// Music Player Setup with YouTube API
+let youtubePlayer;
+let playerReady = false;
+let apiReady = false;
 
-    // Only show controls if music is enabled in config
+// Check if YouTube API is already loaded
+if (typeof YT !== 'undefined' && YT.loaded) {
+    console.log('YouTube API already loaded');
+    apiReady = true;
+}
+
+// This function creates an <iframe> (and YouTube player) after the API code downloads.
+function onYouTubeIframeAPIReady() {
+    apiReady = true;
+    console.log('YouTube API Ready - onYouTubeIframeAPIReady called');
+    initializeYouTubePlayer();
+}
+
+// Make sure it's available globally
+window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
+
+function initializeYouTubePlayer() {
+    const config = window.VALENTINE_CONFIG;
+    
+    console.log('Initializing YouTube player...');
+    console.log('Music enabled:', config.music.enabled);
+    console.log('Video ID:', config.music.youtubeVideoId);
+    
     if (!config.music.enabled) {
-        musicControls.style.display = 'none';
+        document.getElementById('musicControls').style.display = 'none';
         return;
     }
 
-    // Set music source and volume
-    musicSource.src = config.music.musicUrl;
-    bgMusic.volume = config.music.volume || 0.5;
-    bgMusic.load();
-
-    // Try autoplay if enabled
-    if (config.music.autoplay) {
-        const playPromise = bgMusic.play();
-        if (playPromise !== undefined) {
-            playPromise.catch(error => {
-                console.log("Autoplay prevented by browser");
-                musicToggle.textContent = config.music.startText;
-            });
-        }
+    try {
+        youtubePlayer = new YT.Player('youtube-player', {
+            height: '0',
+            width: '0',
+            videoId: config.music.youtubeVideoId,
+            playerVars: {
+                'autoplay': 0,
+                'controls': 0,
+                'loop': 1,
+                'playlist': config.music.youtubeVideoId,
+                'playsinline': 1,
+                'enablejsapi': 1,
+                'origin': window.location.origin
+            },
+            events: {
+                'onReady': onPlayerReady,
+                'onStateChange': onPlayerStateChange,
+                'onError': onPlayerError
+            }
+        });
+        console.log('YouTube player object created');
+    } catch (error) {
+        console.error('Error creating YouTube player:', error);
+        alert('Error loading music player: ' + error.message);
     }
+}
 
-    // Toggle music on button click
-    musicToggle.addEventListener('click', () => {
-        if (bgMusic.paused) {
-            bgMusic.play();
-            musicToggle.textContent = config.music.stopText;
-        } else {
-            bgMusic.pause();
-            musicToggle.textContent = config.music.startText;
+function onPlayerReady(event) {
+    playerReady = true;
+    const config = window.VALENTINE_CONFIG;
+    const musicToggle = document.getElementById('musicToggle');
+    
+    console.log('✓ Player ready! Click the button to play music.');
+    
+    // Set volume (0-100)
+    event.target.setVolume(config.music.volume);
+    
+    musicToggle.textContent = config.music.startText;
+    musicToggle.disabled = false;
+    musicToggle.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+    
+    // Remove all existing event listeners by replacing the element
+    const newToggle = musicToggle.cloneNode(true);
+    musicToggle.parentNode.replaceChild(newToggle, musicToggle);
+    
+    // Add click handler to the new element
+    newToggle.addEventListener('click', function() {
+        console.log('Music button clicked');
+        
+        if (!playerReady) {
+            console.log('Player not ready yet');
+            alert('Music player is not ready yet. Please wait a moment.');
+            return;
+        }
+        
+        try {
+            const playerState = youtubePlayer.getPlayerState();
+            console.log('Current player state:', playerState);
+            
+            // -1 = unstarted, 0 = ended, 1 = playing, 2 = paused, 3 = buffering, 5 = cued
+            if (playerState === 1) {
+                // Currently playing, so pause it
+                youtubePlayer.pauseVideo();
+                newToggle.textContent = config.music.startText;
+                console.log('⏸ Music paused');
+            } else {
+                // Currently paused or stopped, so play it
+                youtubePlayer.playVideo();
+                newToggle.textContent = config.music.stopText;
+                console.log('▶ Playing music...');
+            }
+        } catch (error) {
+            console.error('Error toggling music:', error);
+            alert('Error playing music: ' + error.message);
         }
     });
-} 
+    
+    console.log('Music button event listener attached');
+}
+
+function onPlayerStateChange(event) {
+    const config = window.VALENTINE_CONFIG;
+    const musicToggle = document.getElementById('musicToggle');
+    
+    const states = {
+        '-1': 'Unstarted',
+        '0': 'Ended',
+        '1': 'Playing',
+        '2': 'Paused',
+        '3': 'Buffering',
+        '5': 'Cued'
+    };
+    
+    console.log('Player state changed to:', states[event.data] || event.data);
+    
+    // Update button text based on player state
+    if (musicToggle) {
+        if (event.data === YT.PlayerState.PLAYING) {
+            musicToggle.textContent = config.music.stopText;
+            console.log('🎵 Music is now playing');
+        } else if (event.data === YT.PlayerState.PAUSED) {
+            musicToggle.textContent = config.music.startText;
+            console.log('⏸️ Music is paused');
+        } else if (event.data === YT.PlayerState.ENDED) {
+            musicToggle.textContent = config.music.startText;
+            console.log('⏹️ Music ended');
+        }
+    }
+}
+
+function onPlayerError(event) {
+    console.error('YouTube Player Error:', event.data);
+    const errorMessages = {
+        2: 'Invalid video ID - Check if the ID is correct',
+        5: 'HTML5 player error - Try a different browser',
+        100: 'Video not found or is PRIVATE',
+        101: 'Video owner DISABLED embedding - Choose a different video',
+        150: 'Video owner DISABLED embedding - Choose a different video'
+    };
+    
+    const errorMsg = errorMessages[event.data] || `Unknown error (${event.data})`;
+    console.error('ERROR:', errorMsg);
+    
+    alert('🎵 Music Error!\n\n' + errorMsg + '\n\nThis video cannot be played in the web page.\nPlease try a different YouTube video.\n\nOpen the browser console (F12) for more details.');
+}
+
+function setupMusicPlayer() {
+    const config = window.VALENTINE_CONFIG;
+    
+    if (!config.music.enabled) {
+        document.getElementById('musicControls').style.display = 'none';
+        console.log('Music disabled in config');
+        return;
+    }
+    
+    console.log('Setting up music player...');
+    console.log('YouTube Video ID:', config.music.youtubeVideoId);
+    
+    const musicToggle = document.getElementById('musicToggle');
+    if (!musicToggle) {
+        console.error('ERROR: Music toggle button not found!');
+        return;
+    }
+    
+    musicToggle.textContent = '⏳ Loading Music...';
+    musicToggle.disabled = true;
+    console.log('Music button found and set to loading state');
+    
+    // Check if YouTube API is ready, if not wait for it
+    let checkCount = 0;
+    const maxChecks = 20; // Check for 10 seconds
+    
+    const checkAPIReady = setInterval(() => {
+        checkCount++;
+        console.log(`Checking for YouTube API... attempt ${checkCount}`);
+        
+        if (typeof YT !== 'undefined' && typeof YT.Player !== 'undefined') {
+            console.log('✓ YouTube API detected!');
+            clearInterval(checkAPIReady);
+            
+            // If onYouTubeIframeAPIReady hasn't been called yet, call it manually
+            if (!apiReady) {
+                console.log('Manually triggering YouTube player initialization');
+                onYouTubeIframeAPIReady();
+            }
+        } else if (checkCount >= maxChecks) {
+            console.error('YouTube API failed to load after 10 seconds');
+            clearInterval(checkAPIReady);
+            musicToggle.disabled = false;
+            musicToggle.textContent = '❌ Music Failed';
+            alert('Failed to load YouTube music player. Please refresh the page or check your internet connection.');
+        }
+    }, 500);
+}
