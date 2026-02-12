@@ -333,12 +333,48 @@ let playerReady = false;
 let apiReady = false;
 let isMuted = true;
 let userInteracted = false;
+let shouldAutoplay = false;
 
 // Check if YouTube API is already loaded
 if (typeof YT !== 'undefined' && YT.loaded) {
     console.log('YouTube API already loaded');
     apiReady = true;
 }
+
+// Handle the start overlay
+window.addEventListener('DOMContentLoaded', () => {
+    const startOverlay = document.getElementById('musicStartOverlay');
+    const startBtn = document.getElementById('startExperience');
+    
+    if (startBtn && startOverlay) {
+        startBtn.addEventListener('click', () => {
+            userInteracted = true;
+            shouldAutoplay = true;
+            
+            // Hide overlay with animation
+            startOverlay.classList.add('hidden');
+            setTimeout(() => {
+                startOverlay.style.display = 'none';
+            }, 500);
+            
+            // If player is ready, start music immediately
+            if (playerReady && youtubePlayer) {
+                try {
+                    youtubePlayer.playVideo();
+                    youtubePlayer.unMute();
+                    isMuted = false;
+                    const musicToggle = document.getElementById('musicToggle');
+                    if (musicToggle) {
+                        musicToggle.textContent = config.music.stopText;
+                    }
+                    console.log('🔊 Music started after user interaction');
+                } catch (error) {
+                    console.error('Error starting music:', error);
+                }
+            }
+        });
+    }
+});
 
 // This function creates an <iframe> (and YouTube player) after the API code downloads.
 function onYouTubeIframeAPIReady() {
@@ -359,6 +395,8 @@ function initializeYouTubePlayer() {
     
     if (!config.music.enabled) {
         document.getElementById('musicControls').style.display = 'none';
+        const overlay = document.getElementById('musicStartOverlay');
+        if (overlay) overlay.style.display = 'none';
         return;
     }
 
@@ -368,14 +406,14 @@ function initializeYouTubePlayer() {
             width: '0',
             videoId: config.music.youtubeVideoId,
             playerVars: {
-                'autoplay': 1, // Enable autoplay
+                'autoplay': 0, // Don't autoplay, wait for user interaction
                 'controls': 0,
                 'loop': 1,
                 'playlist': config.music.youtubeVideoId,
                 'playsinline': 1,
                 'enablejsapi': 1,
                 'origin': window.location.origin,
-                'mute': 1 // Start muted for autoplay to work
+                'mute': 0
             },
             events: {
                 'onReady': onPlayerReady,
@@ -400,27 +438,25 @@ function onPlayerReady(event) {
     event.target.setVolume(config.music.volume);
     
     musicToggle.disabled = false;
+    musicToggle.textContent = config.music.startText;
     musicToggle.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+    
+    // If user already clicked start button, play music now
+    if (shouldAutoplay && userInteracted) {
+        try {
+            event.target.playVideo();
+            event.target.unMute();
+            isMuted = false;
+            musicToggle.textContent = config.music.stopText;
+            console.log('🔊 Music started (player was ready after user interaction)');
+        } catch (error) {
+            console.error('Error starting music:', error);
+        }
+    }
     
     // Remove all existing event listeners by replacing the element
     const newToggle = musicToggle.cloneNode(true);
     musicToggle.parentNode.replaceChild(newToggle, musicToggle);
-    
-    // Video should be playing but muted due to autoplay
-    // Try to unmute automatically
-    setTimeout(() => {
-        try {
-            event.target.unMute();
-            isMuted = false;
-            newToggle.textContent = config.music.stopText;
-            console.log('🔊 Music auto-unmuted successfully');
-        } catch (error) {
-            // Autoplay blocked, user needs to click
-            isMuted = true;
-            newToggle.textContent = config.music.startText;
-            console.log('🔇 Auto-unmute blocked by browser, user must click');
-        }
-    }, 1000);
     
     // Add click handler to toggle music
     newToggle.addEventListener('click', function() {
@@ -451,7 +487,7 @@ function onPlayerReady(event) {
         }
     });
     
-    console.log('Music player ready and attempting autoplay');
+    console.log('Music player ready');
 }
 
 function onPlayerStateChange(event) {
