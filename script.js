@@ -224,12 +224,15 @@ function showLyingMessage(x, y, btnWidth, btnHeight) {
     
     messageDiv.style.left = messageX + 'px';
     messageDiv.style.top = messageY + 'px';
+    
     document.body.appendChild(messageDiv);
     
-    // Fade out and remove after 2 seconds
+    // Remove message after 2 seconds
     setTimeout(() => {
         messageDiv.style.opacity = '0';
-        setTimeout(() => messageDiv.remove(), 500);
+        setTimeout(() => {
+            messageDiv.remove();
+        }, 500);
     }, 2000);
 }
 
@@ -279,35 +282,49 @@ window.addEventListener('load', setInitialPosition);
 
 // Celebration function
 function celebrate() {
+    // Hide all questions
     document.querySelectorAll('.question-section').forEach(q => q.classList.add('hidden'));
+    
+    // Show celebration
     const celebration = document.getElementById('celebration');
     celebration.classList.remove('hidden');
     
-    // Set celebration messages
+    // Set celebration texts
     document.getElementById('celebrationTitle').textContent = config.celebration.title;
     document.getElementById('celebrationMessage').textContent = config.celebration.message;
     document.getElementById('celebrationEmojis').textContent = config.celebration.emojis;
     
-    // Create heart explosion effect
+    // Create heart explosion
     createHeartExplosion();
 }
 
-// Create heart explosion animation
+// Create heart explosion effect
 function createHeartExplosion() {
-    for (let i = 0; i < 50; i++) {
-        const heart = document.createElement('div');
-        const randomHeart = config.floatingEmojis.hearts[Math.floor(Math.random() * config.floatingEmojis.hearts.length)];
-        heart.innerHTML = randomHeart;
-        heart.className = 'heart explosion-heart';
-        document.querySelector('.floating-elements').appendChild(heart);
-        
-        // Random position and animation
-        heart.style.left = '50%';
-        heart.style.top = '50%';
-        heart.style.setProperty('--random-x', (Math.random() - 0.5) * 200 + 'vw');
-        heart.style.setProperty('--random-y', (Math.random() - 0.5) * 200 + 'vh');
-        heart.style.animationDelay = Math.random() * 0.5 + 's';
+    for (let i = 0; i < 30; i++) {
+        setTimeout(() => {
+            createExplosionHeart();
+        }, i * 100);
     }
+}
+
+function createExplosionHeart() {
+    const heart = document.createElement('div');
+    const randomHeart = config.floatingEmojis.hearts[Math.floor(Math.random() * config.floatingEmojis.hearts.length)];
+    heart.innerHTML = randomHeart;
+    heart.className = 'heart explosion-heart';
+    document.querySelector('.floating-elements').appendChild(heart);
+    
+    // Random position and animation
+    heart.style.left = '50%';
+    heart.style.top = '50%';
+    heart.style.setProperty('--random-x', (Math.random() - 0.5) * 200 + 'vw');
+    heart.style.setProperty('--random-y', (Math.random() - 0.5) * 200 + 'vh');
+    heart.style.animationDelay = Math.random() * 0.5 + 's';
+    
+    // Remove after animation completes
+    setTimeout(() => {
+        heart.remove();
+    }, 2000);
 }
 
 // Music Player Setup with YouTube API
@@ -315,6 +332,7 @@ let youtubePlayer;
 let playerReady = false;
 let apiReady = false;
 let isMuted = true;
+let userInteracted = false;
 
 // Check if YouTube API is already loaded
 if (typeof YT !== 'undefined' && YT.loaded) {
@@ -350,14 +368,14 @@ function initializeYouTubePlayer() {
             width: '0',
             videoId: config.music.youtubeVideoId,
             playerVars: {
-                'autoplay': config.music.autoplay ? 1 : 0,
+                'autoplay': 1, // Enable autoplay
                 'controls': 0,
                 'loop': 1,
                 'playlist': config.music.youtubeVideoId,
                 'playsinline': 1,
                 'enablejsapi': 1,
                 'origin': window.location.origin,
-                'mute': 1
+                'mute': 1 // Start muted for autoplay to work
             },
             events: {
                 'onReady': onPlayerReady,
@@ -368,7 +386,6 @@ function initializeYouTubePlayer() {
         console.log('YouTube player object created');
     } catch (error) {
         console.error('Error creating YouTube player:', error);
-        alert('Error loading music player: ' + error.message);
     }
 }
 
@@ -389,7 +406,23 @@ function onPlayerReady(event) {
     const newToggle = musicToggle.cloneNode(true);
     musicToggle.parentNode.replaceChild(newToggle, musicToggle);
     
-    // Add click handler to the new element
+    // Video should be playing but muted due to autoplay
+    // Try to unmute automatically
+    setTimeout(() => {
+        try {
+            event.target.unMute();
+            isMuted = false;
+            newToggle.textContent = config.music.stopText;
+            console.log('🔊 Music auto-unmuted successfully');
+        } catch (error) {
+            // Autoplay blocked, user needs to click
+            isMuted = true;
+            newToggle.textContent = config.music.startText;
+            console.log('🔇 Auto-unmute blocked by browser, user must click');
+        }
+    }, 1000);
+    
+    // Add click handler to toggle music
     newToggle.addEventListener('click', function() {
         console.log('Music button clicked');
         
@@ -400,11 +433,14 @@ function onPlayerReady(event) {
         
         try {
             if (isMuted) {
+                // Unmute and play
+                youtubePlayer.playVideo();
                 youtubePlayer.unMute();
                 isMuted = false;
                 newToggle.textContent = config.music.stopText;
                 console.log('🔊 Music unmuted');
             } else {
+                // Mute
                 youtubePlayer.mute();
                 isMuted = true;
                 newToggle.textContent = config.music.startText;
@@ -415,31 +451,7 @@ function onPlayerReady(event) {
         }
     });
     
-    // If autoplay is enabled, start playing and try to unmute
-    if (config.music.autoplay) {
-        event.target.playVideo();
-        newToggle.textContent = config.music.startText;
-        
-        // Try to unmute after a brief delay
-        setTimeout(() => {
-            try {
-                event.target.unMute();
-                isMuted = false;
-                newToggle.textContent = config.music.stopText;
-                console.log('🔊 Music auto-unmuted successfully');
-            } catch (error) {
-                isMuted = true;
-                newToggle.textContent = config.music.startText;
-                console.log('🔇 Auto-unmute blocked, user must click');
-            }
-        }, 1000);
-        
-        console.log('▶ Autoplay started');
-    } else {
-        newToggle.textContent = config.music.startText;
-    }
-    
-    console.log('Music button ready');
+    console.log('Music player ready and attempting autoplay');
 }
 
 function onPlayerStateChange(event) {
@@ -453,6 +465,11 @@ function onPlayerStateChange(event) {
     };
     
     console.log('Player state changed to:', states[event.data] || event.data);
+    
+    // If video ended, replay it
+    if (event.data === 0 && !isMuted) {
+        youtubePlayer.playVideo();
+    }
 }
 
 function onPlayerError(event) {
@@ -468,7 +485,12 @@ function onPlayerError(event) {
     const errorMsg = errorMessages[event.data] || `Unknown error (${event.data})`;
     console.error('ERROR:', errorMsg);
     
-    alert('🎵 Music Error!\n\n' + errorMsg + '\n\nThis video cannot be played in the web page.\nPlease try a different YouTube video.\n\nOpen the browser console (F12) for more details.');
+    const musicToggle = document.getElementById('musicToggle');
+    if (musicToggle) {
+        musicToggle.textContent = '❌ Music Error';
+        musicToggle.disabled = true;
+        musicToggle.style.background = 'linear-gradient(135deg, #ff6b6b 0%, #ff8787 100%)';
+    }
 }
 
 function setupMusicPlayer() {
@@ -495,11 +517,10 @@ function setupMusicPlayer() {
     
     // Check if YouTube API is ready, if not wait for it
     let checkCount = 0;
-    const maxChecks = 20; // Check for 10 seconds
+    const maxChecks = 40; // Check for 20 seconds
     
     const checkAPIReady = setInterval(() => {
         checkCount++;
-        console.log(`Checking for YouTube API... attempt ${checkCount}`);
         
         if (typeof YT !== 'undefined' && typeof YT.Player !== 'undefined') {
             console.log('✓ YouTube API detected!');
@@ -511,11 +532,11 @@ function setupMusicPlayer() {
                 onYouTubeIframeAPIReady();
             }
         } else if (checkCount >= maxChecks) {
-            console.error('YouTube API failed to load after 10 seconds');
+            console.error('YouTube API failed to load after 20 seconds');
             clearInterval(checkAPIReady);
             musicToggle.disabled = false;
             musicToggle.textContent = '❌ Music Failed';
-            alert('Failed to load YouTube music player. Please refresh the page or check your internet connection.');
+            musicToggle.style.background = 'linear-gradient(135deg, #ff6b6b 0%, #ff8787 100%)';
         }
     }, 500);
 }
